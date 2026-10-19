@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Signup({ onSignup }) {
+function Signup() {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -9,6 +10,8 @@ function Signup({ onSignup }) {
     email: "",
     password: "",
   });
+
+  const [error, setError] = useState("");
 
   const handleChange = (event) => {
     setFormData({
@@ -19,69 +22,83 @@ function Signup({ onSignup }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
 
-    const response = await fetch("https://xblogapp-jz82.onrender.com/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (response.ok) {
-      localStorage.setItem("token", data.token || "");
-      localStorage.setItem("user", JSON.stringify(data.user));
+      if (!response.ok) {
+        setError(data.message || "Signup failed");
+        return;
+      }
 
-      onSignup(data.user);
-      navigate("/");
-    } else {
-      alert(data.message || "Signup failed");
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      navigate("/login");
+    } catch (error) {
+      setError("Cannot connect to the local backend. Check that the server is running.");
     }
   };
 
-    return (
+  return (
     <main className="auth-page">
       <h1>Signup</h1>
+
+      {error && <p role="alert">{error}</p>}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <label htmlFor="name">Name</label>
         <input
-            id="name"
-            name="name"
-            type="text"
-            placeholder="Name"
-            value={formData.name}
-            onChange={handleChange}
+          id="name"
+          name="name"
+          type="text"
+          placeholder="Name"
+          value={formData.name}
+          onChange={handleChange}
+          required
         />
 
         <label htmlFor="email">Email</label>
         <input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
+          id="email"
+          name="email"
+          type="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          required
         />
 
         <label htmlFor="password">Password</label>
         <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
+          id="password"
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
+          required
         />
 
         <button type="submit">Signup</button>
       </form>
-
-      <button className="google-button" type="button">
-        Sign Up with Google
-      </button>
     </main>
   );
 }

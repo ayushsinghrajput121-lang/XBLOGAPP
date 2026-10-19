@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -10,6 +11,8 @@ function CreatePost() {
     tags: "",
   });
 
+  const [error, setError] = useState("");
+
   const handleChange = (event) => {
     setFormData({
       ...formData,
@@ -19,37 +22,57 @@ function CreatePost() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
 
     const token = localStorage.getItem("token");
 
-    const response = await fetch("https://xblogapp-jz82.onrender.com/api/posts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        title: formData.title,
-        content: formData.content,
-        tags: formData.tags
-          .split(",")
-          .map((tag) => tag.trim())
-          .filter(Boolean),
-      }),
-    });
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-    const data = await response.json();
+    try {
+      const response = await fetch("http://localhost:5000/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          content: formData.content,
+          tags: formData.tags
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        }),
+      });
 
-    if (response.ok) {
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+          return;
+        }
+
+        setError(data.message || "Failed to create post");
+        return;
+      }
+
       navigate("/dashboard");
-    } else {
-      alert(data.message || "Failed to create post");
+    } catch (err) {
+      setError("Cannot connect to the backend. Check that the server is running.");
     }
   };
 
-    return (
+  return (
     <main className="create-page">
       <h1>Create Post</h1>
+
+      {error && <p role="alert">{error}</p>}
 
       <form className="create-form" onSubmit={handleSubmit}>
         <input
@@ -58,6 +81,7 @@ function CreatePost() {
           placeholder="Title"
           value={formData.title}
           onChange={handleChange}
+          required
         />
 
         <textarea
@@ -65,12 +89,13 @@ function CreatePost() {
           placeholder="Content"
           value={formData.content}
           onChange={handleChange}
+          required
         />
 
         <input
           name="tags"
           type="text"
-          placeholder="Tags"
+          placeholder="Tags (comma-separated)"
           value={formData.tags}
           onChange={handleChange}
         />
