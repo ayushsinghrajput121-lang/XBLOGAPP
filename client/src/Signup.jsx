@@ -52,7 +52,7 @@ function Signup() {
       }
 
       navigate("/login");
-    } catch (error) {
+    } catch {
       setError("Cannot connect to the local backend. Check that the server is running.");
     }
   };

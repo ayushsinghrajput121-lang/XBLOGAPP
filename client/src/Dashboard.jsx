@@ -7,52 +7,71 @@ function Dashboard() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const fetchPosts = async () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPosts = async () => {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          "http://localhost:5000/api/users/me/posts",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          navigate("/login");
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch posts");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setPosts(data);
+          setError("");
+        }
+      } catch {
+        if (!cancelled) {
+          setError("Failed to fetch posts. Please try again.");
+        }
+      }
+    };
+
+    loadPosts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  const handleDelete = async (postId) => {
+    if (
+      !window.confirm("Are you sure you want to delete this post?")
+    ) {
+      return;
+    }
+
     const token = localStorage.getItem("token");
 
     if (!token) {
       navigate("/login");
       return;
     }
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/users/me/posts",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        navigate("/login");
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch posts");
-      }
-
-      const data = await response.json();
-      setPosts(data);
-    } catch (err) {
-      setError(err.message || "Unable to load posts");
-    }
-  };
-
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const handleDelete = async (postId) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) {
-      return;
-    }
-
-    const token = localStorage.getItem("token");
 
     try {
       const response = await fetch(
@@ -67,6 +86,13 @@ function Dashboard() {
 
       const data = await response.json().catch(() => ({}));
 
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("/login");
+        return;
+      }
+
       if (!response.ok) {
         setError(data.message || "Failed to delete post");
         return;
@@ -75,8 +101,9 @@ function Dashboard() {
       setPosts((currentPosts) =>
         currentPosts.filter((post) => post._id !== postId)
       );
+
       setError("");
-    } catch (err) {
+    } catch {
       setError("Could not connect to the backend.");
     }
   };

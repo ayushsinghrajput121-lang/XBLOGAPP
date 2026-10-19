@@ -63,7 +63,7 @@ function CreatePost() {
       }
 
       navigate("/dashboard");
-    } catch (err) {
+    } catch  {
       setError("Cannot connect to the backend. Check that the server is running.");
     }
   };
