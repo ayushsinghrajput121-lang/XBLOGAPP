@@ -1,1 +1,8 @@
-server/.env
+node_modules/
+**/node_modules/
+.env
+.env.*
+!.env.example
+dist/
+/package.json
+/package-lock.json
